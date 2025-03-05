@@ -20,7 +20,7 @@ def get_arguments():
     #load box
     parser.add_argument("--dataset", type=str, default="cifar10")
     parser.add_argument("--tlabel", type=int, default=5)
-    parser.add_argument("--model", type=str, default="resnet18")
+    parser.add_argument("--model", type=str, default="preactresnet18")
     parser.add_argument("--attack", type=str, default="wanet")
     parser.add_argument("--device", type=str, default="cuda:3")
     parser.add_argument("--size", type=int, default=32) 

@@ -5,6 +5,9 @@ from torchvision import transforms, datasets
 import torch.nn.functional as F
 import os
 from torch.utils.data import DataLoader
+from torchvision.models import convnext_tiny, vit_b_16, vgg19_bn
+from torchvision.transforms import Resize
+from models.preactresnet import PreActResNet18
 from models import densenet, resnet, vgg
 from models import vit
 from models.ia.models import Generator
@@ -107,18 +110,16 @@ class Box():
                 transforms_list.append(transforms.RandomHorizontalFlip())
 
         transforms_list.append(transforms.ToTensor())
-        transforms_list.append(self.get_normalizer(dataset_name))
+        transforms_list.append(self.get_normalizer())
         return transforms.Compose(transforms_list)
 
     def get_dataloader(self, train, batch_size, shuffle):
         tf = self.get_transform(train)
         dataset_name = self.dataset
         if dataset_name == "cifar10":
-            # Load the CIFAR-10 test dataset (downloads to "./data" if not already present)
-            ds = datasets.CIFAR10(root="./data", train=False, download=True, transform=tf)
+            ds = datasets.CIFAR10(root="../Downloads/data", train=False, download=True, transform=tf)
         elif dataset_name == "cifar100":
-            # Load the CIFAR-10 test dataset (downloads to "./data" if not already present)
-            ds = datasets.CIFAR100(root="./data", train=False, download=True, transform=tf)
+            ds = datasets.CIFAR100(root="../Downloads/data", train=False, download=True, transform=tf)
         elif dataset_name == "tiny":
             ds = TinyImageNet("/mnt/data/hossein/Hossein_workspace/vision_trust_worthy/downloaded_data/moein/Downloads/tiny_imagenet_dataset",
                                                             split='val',
@@ -136,17 +137,6 @@ class Box():
         #         ds = cifar.CIFAR(path=os.path.join(self.root, "datasets/cifar10"), train=True, train_type=1, tf=tf)
         #     else:
         #         ds = cifar.CIFAR(path=os.path.join(self.root, "datasets/cifar10"), train=False, tf=tf)
-
-        # elif self.dataset == "imagenet":
-        #     ds = imagenet.ImageNet(path=os.path.join(self.root, "datasets"), train=train, tf=tf)
-        
-        # elif self.dataset == "gtsrb":
-        #     if train == "clean":
-        #         ds = gtsrb.GTSRB(path=os.path.join(self.root, "datasets/gtsrb"), train=True, train_type=0, tf=tf)
-        #     elif train == "poison":
-        #         ds = gtsrb.GTSRB(path=os.path.join(self.root, "datasets/gtsrb"), train=True, train_type=1, tf=tf)
-        #     else:
-        #         ds = gtsrb.GTSRB(path=os.path.join(self.root, "datasets/gtsrb"), train=False, tf=tf)
 
         dl = DataLoader(ds, batch_size=batch_size, shuffle=shuffle, num_workers=6)
         return dl
@@ -168,25 +158,45 @@ class Box():
         return param1, param2, classifier
     
     def get_model(self):
+        model = None
+        num_classes = self.num_classes
+        model_arch = self.model
+        if model_arch == "preactresnet18":
+            model = PreActResNet18(num_classes=num_classes)
+        elif model_arch == "vgg19":
+            model = vgg19_bn(num_classes=num_classes)
+        elif model_arch == "convnext":
+            model = convnext_tiny(num_classes=num_classes)
+        elif model_arch == "vit":
+            model = vit_b_16(pretrained=True)
+            model.heads.head = torch.nn.Linear(model.heads.head.in_features, out_features=num_classes, bias=True)
 
-        if self.model == "densenet":
-            return densenet.DenseNet121(num_classes=self.num_classes)
+            # Wrap the model in a Sequential with a Resize layer.
+            model = torch.nn.Sequential(
+                Resize((224, 224)),  # This resizes the input images to 224x224.
+                model,
+            )
+
+        return model
+
+        # if self.model == "densenet":
+        #     return densenet.DenseNet121(num_classes=self.num_classes)
         
-        elif self.model == "resnet18":
-            return resnet.ResNet18(num_classes=self.num_classes)
+        # elif self.model == "preactresnet18":
+        #     return resnet.ResNet18(num_classes=self.num_classes)
             
-        elif self.model == "vgg16":
-            return vgg.VGG("VGG16", num_classes=self.num_classes)
+        # elif self.model == "vgg16":
+        #     return vgg.VGG("VGG16", num_classes=self.num_classes)
         
-        elif self.model == "vit":
-            return vit.ViT(image_size = self.size,
-                           patch_size = 4,
-                           num_classes = self.num_classes,
-                           dim = int(512),
-                           depth = 6,
-                           heads = 8,
-                           mlp_dim = 512,
-                           dropout = 0.1,
-                           emb_dropout = 0.1)
+        # elif self.model == "vit":
+        #     return vit.ViT(image_size = self.size,
+        #                    patch_size = 4,
+        #                    num_classes = self.num_classes,
+        #                    dim = int(512),
+        #                    depth = 6,
+        #                    heads = 8,
+        #                    mlp_dim = 512,
+        #                    dropout = 0.1,
+        #                    emb_dropout = 0.1)
 
     

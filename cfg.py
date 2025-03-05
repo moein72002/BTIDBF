@@ -15,8 +15,10 @@ def get_root():
 def get_arguments():
     parser = argparse.ArgumentParser()
 
+    parser.add_argument("--filename", type=str, default="")
+
     #load box
-    parser.add_argument("--dataset", type=str, default="cifar")
+    parser.add_argument("--dataset", type=str, default="cifar10")
     parser.add_argument("--tlabel", type=int, default=5)
     parser.add_argument("--model", type=str, default="resnet18")
     parser.add_argument("--attack", type=str, default="wanet")

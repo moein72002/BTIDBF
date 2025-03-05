@@ -113,8 +113,8 @@ def main(opt):
     if opt.use_max_bd_feat and not max_bd_feat is None:
         bd_gen = final_bd_gen
 
-    detected_tlabel = get_target_label(testloader=cln_trainloader, testmodel=classifier, box=box, midmodel=bd_gen)
-    print(f"Target Label is {detected_tlabel}")
+    detected_tlabel, model_score = get_target_label(testloader=cln_trainloader, testmodel=classifier, box=box, midmodel=bd_gen)
+    print(f"model_score: {model_score}, Target Label: {detected_tlabel}")
     return detected_tlabel
 
 if __name__ == "__main__":

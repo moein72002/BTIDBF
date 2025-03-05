@@ -1,5 +1,7 @@
 import torch
-from torchvision import transforms
+from datasets.GTSRB import GTSRB
+from datasets.Tiny_Imagenet import TinyImageNet
+from torchvision import transforms, datasets
 import torch.nn.functional as F
 import os
 from torch.utils.data import DataLoader
@@ -12,7 +14,9 @@ import cifar
 class Box():
     def __init__(self, opt) -> None:
         self.opt = opt
+        self.filename = opt.filename
         self.dataset = opt.dataset
+        self.num_classes = self.get_num_classes(self.dataset)
         self.tlabel = opt.tlabel
         self.model = opt.model
         self.attack = opt.attack
@@ -20,7 +24,7 @@ class Box():
         self.denormalizer = self.get_denormalizer()
         self.size = opt.size
         self.device = opt.device
-        self.num_classes = opt.num_classes
+        # self.num_classes = opt.num_classes
         self.attack_type = opt.attack_type
         self.root = opt.root
         if self.attack_type == "all2all":
@@ -34,124 +38,104 @@ class Box():
             os.mkdir(save_path)
         return save_path
 
+    def get_num_classes(self, dataset_name):
+        if dataset_name in ["mnist", "cifar10"]:
+            num_classes = 10
+        elif dataset_name == "gtsrb":
+            num_classes = 43
+        elif dataset_name == "celeba":
+            num_classes = 8
+        elif dataset_name == 'cifar100':
+            num_classes = 100
+        elif dataset_name == 'tiny':
+            num_classes = 200
+        elif dataset_name == 'imagenet':
+            num_classes = 1000
+        else:
+            raise Exception("Invalid Dataset")
+        return num_classes
 
     def get_normalizer(self):
-        if self.dataset == "cifar":
-            return transforms.Normalize([0.4914, 0.4822, 0.4465], [0.2023, 0.1994, 0.2010])
-        elif self.dataset == "gtsrb":
-            return transforms.Normalize([0, 0, 0], [1, 1, 1])
-        elif self.dataset == "imagenet":
-            return transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        dataset_name = self.dataset
+        # idea : given name, return the default normalization of images in the dataset
+        if dataset_name == "cifar10":
+            # from wanet
+            dataset_normalization = (transforms.Normalize([0.4914, 0.4822, 0.4465], [0.247, 0.243, 0.261]))
+        elif dataset_name == 'cifar100':
+            '''get from https://gist.github.com/weiaicunzai/e623931921efefd4c331622c344d8151'''
+            dataset_normalization = (transforms.Normalize([0.5071, 0.4865, 0.4409], [0.2673, 0.2564, 0.2762]))
+        elif dataset_name == "mnist":
+            dataset_normalization = (transforms.Normalize([0.5], [0.5]))
+        elif dataset_name == 'tiny':
+            dataset_normalization = (transforms.Normalize([0.4802, 0.4481, 0.3975], [0.2302, 0.2265, 0.2262]))
+        elif dataset_name == "gtsrb" or dataset_name == "celeba":
+            dataset_normalization = transforms.Normalize([0, 0, 0], [1, 1, 1])
+        elif dataset_name == 'imagenet':
+            dataset_normalization = (
+                transforms.Normalize(
+                    mean=[0.485, 0.456, 0.406],
+                    std=[0.229, 0.224, 0.225],
+                )
+            )
         else:
-            raise Exception("Invalid dataset")
-        
+            raise Exception("Invalid Dataset")
+        return dataset_normalization
+
     def get_denormalizer(self):
-        if self.dataset == "cifar":
-            return transforms.Normalize([-0.4914/0.2023, -0.4822/0.1994, -0.4465/0.2010], [1/0.2023, 1/0.1994, 1/0.2010])
-        elif self.dataset == "gtsrb":
-            return transforms.Normalize([0, 0, 0], [1, 1, 1])
-        elif self.dataset == "imagenet":
-            return transforms.Normalize([-0.485/0.229, -0.456/0.224, -0.406/0.225], [1/0.229, 1/0.224, 1/0.225])
-        else:
-            raise Exception("Invalid dataset")
-        
-    def get_transform(self, train):
-        if train == "clean" or train == "poison":
-            if self.dataset == "cifar":
-                return transforms.Compose([transforms.RandomCrop(size=32, padding=4),
-                                           transforms.RandomHorizontalFlip(0.5),
-                                           transforms.ToTensor(),
-                                           transforms.Normalize([0.4914, 0.4822, 0.4465], [0.2023, 0.1994, 0.2010])])
-            
-            elif self.dataset == "imagenet":
-                return transforms.Compose([transforms.Resize((256, 256)),
-                                           transforms.RandomCrop(size=224, padding=4),
-                                           transforms.ToTensor(),
-                                           transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
-            
-            elif self.dataset == "gtsrb":
-                return transforms.Compose([transforms.Resize((40, 40)),
-                                           transforms.RandomCrop(size=32, padding=4),
-                                           transforms.RandomHorizontalFlip(0.5),
-                                           transforms.ToTensor(),
-                                           transforms.Normalize([0, 0, 0], [1, 1, 1])])
-            else:
-                raise Exception("Invalid dataset")
-        
-        elif train == "test":
-            if self.dataset == "cifar":
-                return transforms.Compose([transforms.ToTensor(),
-                                           transforms.Normalize([0.4914, 0.4822, 0.4465], [0.2023, 0.1994, 0.2010])])
-            
-            elif self.dataset == "imagenet":
-                return transforms.Compose([transforms.Resize((256, 256)),
-                                           transforms.CenterCrop(size=224),
-                                           transforms.ToTensor(),
-                                           transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
-            elif self.dataset == "gtsrb":
-                return transforms.Compose([transforms.Resize((40, 40)),
-                                           transforms.CenterCrop(size=32),
-                                           transforms.ToTensor(),
-                                           transforms.Normalize([0, 0, 0], [1, 1, 1])])
-            else:
-                raise Exception("Invalid dataset")
-        
-        else:
-            raise Exception("Invalid train")
+        # Get the normalizer which holds the original mean and std values
+        normalizer = self.get_normalizer()
+        mean = normalizer.mean
+        std = normalizer.std
 
-    def poisoned(self, img_tensor, param1=None, param2=None):
-        if self.attack == "badnets":
-            mask = param1
-            ptn = param2
-            img_tensor = self.denormalizer(img_tensor)
-            bd_inputs = (1-mask) * img_tensor + mask*ptn
-            return self.normalizer(bd_inputs)
-        elif self.attack == "blend":
-            alpha = param1
-            trigger = param2
-            bd_inputs = (1-alpha) * img_tensor + alpha*self.normalizer(trigger)
-            return bd_inputs
-        elif self.attack == "wanet":
-            noise_grid = param1
-            identity_grid = param2
-            grid_temps = (identity_grid + 0.5 * noise_grid / self.size) * 1
-            grid_temps = torch.clamp(grid_temps, -1, 1)
-            num_bd = img_tensor.shape[0]
-            bd_inputs = F.grid_sample(img_tensor[:num_bd], grid_temps.repeat(num_bd, 1, 1, 1), align_corners=True)
-            return bd_inputs
-        elif self.attack == "ia":
-            netG = param1
-            netM = param2
-            patterns = netG(img_tensor)
-            patterns = netG.normalize_pattern(patterns)
-            masks_output = netM.threshold(netM(img_tensor))
-            bd_inputs = img_tensor + (patterns - img_tensor) * masks_output
-            return bd_inputs
-        elif self.attack == "lc":
-            mask = param1
-            ptn = param2
-            img_tensor = self.denormalizer(img_tensor)
-            bd_inputs = (1-mask) * img_tensor + mask*ptn
-            return self.normalizer(bd_inputs)
-        elif self.attack == "bppattack":
-            inputs_bd = self.back_to_np_4d(img_tensor, self.opt)
-            squeeze_num = 8
-            inputs_bd = torch.round(inputs_bd/255.0*(squeeze_num-1))/(squeeze_num-1)*255
-            inputs_bd = self.np_4d_to_tensor(inputs_bd,self.opt)
-            return inputs_bd
+        # Compute the inverse transformation parameters:
+        # For each channel, denorm_mean = -mean / std and denorm_std = 1 / std.
+        denorm_mean = [-m / s for m, s in zip(mean, std)]
+        denorm_std = [1 / s for s in std]
 
-        else:
-            raise Exception("Invalid attack")
+        return transforms.Normalize(denorm_mean, denorm_std)
+        
+    def get_transform(self, train=True, random_crop_padding=4):
+        dataset_name = self.dataset
+        input_height, input_width = self.size, self.size
+        # idea : given name, return the final implememnt transforms for the dataset
+        transforms_list = []
+        transforms_list.append(transforms.Resize((input_height, input_width)))
+        if train:
+            transforms_list.append(transforms.RandomCrop((input_height, input_width), padding=random_crop_padding))
+            # transforms_list.append(transforms.RandomRotation(10))
+            if dataset_name == "cifar10":
+                transforms_list.append(transforms.RandomHorizontalFlip())
+
+        transforms_list.append(transforms.ToTensor())
+        transforms_list.append(self.get_normalizer(dataset_name))
+        return transforms.Compose(transforms_list)
 
     def get_dataloader(self, train, batch_size, shuffle):
         tf = self.get_transform(train)
-        if self.dataset == "cifar":
-            if train == "clean":
-                ds = cifar.CIFAR(path=os.path.join(self.root, "datasets/cifar10"), train=True, train_type=0, tf=tf)
-            elif train == "poison":
-                ds = cifar.CIFAR(path=os.path.join(self.root, "datasets/cifar10"), train=True, train_type=1, tf=tf)
-            else:
-                ds = cifar.CIFAR(path=os.path.join(self.root, "datasets/cifar10"), train=False, tf=tf)
+        dataset_name = self.dataset
+        if dataset_name == "cifar10":
+            # Load the CIFAR-10 test dataset (downloads to "./data" if not already present)
+            ds = datasets.CIFAR10(root="./data", train=False, download=True, transform=tf)
+        elif dataset_name == "cifar100":
+            # Load the CIFAR-10 test dataset (downloads to "./data" if not already present)
+            ds = datasets.CIFAR100(root="./data", train=False, download=True, transform=tf)
+        elif dataset_name == "tiny":
+            ds = TinyImageNet("/mnt/data/hossein/Hossein_workspace/vision_trust_worthy/downloaded_data/moein/Downloads/tiny_imagenet_dataset",
+                                                            split='val',
+                                                            download=True, transform=tf
+                                                            )
+        elif dataset_name == "gtsrb":
+            ds = GTSRB("/mnt/data/hossein/Hossein_workspace/vision_trust_worthy/downloaded_data/moein/Downloads/gtsrb/gtsrb",
+                                                    train=False, transform=tf
+                                                    )
+
+        # if self.dataset == "cifar10":
+        #     if train == "clean":
+        #         ds = cifar.CIFAR(path=os.path.join(self.root, "datasets/cifar10"), train=True, train_type=0, tf=tf)
+        #     elif train == "poison":
+        #         ds = cifar.CIFAR(path=os.path.join(self.root, "datasets/cifar10"), train=True, train_type=1, tf=tf)
+        #     else:
+        #         ds = cifar.CIFAR(path=os.path.join(self.root, "datasets/cifar10"), train=False, tf=tf)
 
         # elif self.dataset == "imagenet":
         #     ds = imagenet.ImageNet(path=os.path.join(self.root, "datasets"), train=train, tf=tf)
@@ -168,57 +152,18 @@ class Box():
         return dl
 
     def get_state_dict(self):
-        if self.attack_type == "all2one":
-            filename = self.dataset + "-" + self.attack + "-" + self.model + "-target" + str(self.tlabel) + ".pt.tar"
-        elif self.attack_type == "all2all":
-            filename = self.dataset + "-" + self.attack + "-" + self.model + "-targetall.pt.tar"
-        else:
-            raise Exception("Invalid Attack Type")
-        
-        state_dict = torch.load(os.path.join(self.root, "checkpoints/"+filename), map_location=torch.device('cpu'))
+        filename = self.filename
 
-        if self.attack == "badnets":
-            param1 = state_dict["mask"]
-            param2 = state_dict["ptn"]
-        elif self.attack == "lc":
-            param1 = state_dict["mask"]
-            param2 = state_dict["ptn"]
-        elif self.attack == "blend":
-            param1 = state_dict["alpha"]
-            param2 = state_dict["trigger"]
-        elif self.attack == "wanet":
-            param1 = state_dict["noise_grid"]
-            param2 = state_dict["identity_grid"]
-        elif self.attack == "ia":
-            param1 = Generator(dataset=self.dataset)
-            param2 = Generator(dataset=self.dataset, out_channels=1)
-            param1.load_state_dict(state_dict["netG"])
-            param2.load_state_dict(state_dict["netM"])
-            param1.eval()
-            param2.eval()
-        elif self.attack == "bppattack":
-            param1 = None
-            param2 = None
-        else:
-            raise Exception("Invalid attack")
+        state_dict = torch.load(filename, map_location=torch.device('cpu'))
 
         classifier = self.get_model()
-        try:
-            classifier.load_state_dict(state_dict["netC"])
-        except:
-            classifier.load_state_dict(state_dict["model"])
+        classifier.load_state_dict(state_dict["model"])
         
         classifier = classifier.to(self.device)
         classifier.eval()
 
-        try:
-            param1 = param1.to(self.device)
-        except:
-            pass
-        try:
-            param2 = param2.to(self.device)
-        except:
-            pass
+        param1 = None
+        param2 = None
 
         return param1, param2, classifier
     
@@ -244,50 +189,4 @@ class Box():
                            dropout = 0.1,
                            emb_dropout = 0.1)
 
-    # BppAttak tools
-    def back_to_np_4d(self, inputs, opt):
-        if opt.dataset == "cifar":
-            expected_values = [0.4914, 0.4822, 0.4465]
-            variance = [0.2023, 0.1994, 0.2010]
-        elif opt.dataset == "mnist":
-            expected_values = [0.5]
-            variance = [0.5]
-        elif opt.dataset == "imagenet":
-            expected_values = [0.485, 0.456, 0.406]
-            variance = [0.229, 0.224, 0.225]
-        elif opt.dataset in ["gtsrb","celeba"]:
-            expected_values = [0,0,0]
-            variance = [1,1,1]
-        inputs_clone = inputs.clone()
-        if opt.dataset == "mnist":
-            inputs_clone[:,:,:,:] = inputs_clone[:,:,:,:] * variance[0] + expected_values[0]
-
-        else:
-            for channel in range(3):
-                inputs_clone[:,channel,:,:] = inputs_clone[:,channel,:,:] * variance[channel] + expected_values[channel]
-
-        return inputs_clone*255
-    
-    def np_4d_to_tensor(self, inputs, opt):
-        if opt.dataset == "cifar":
-            expected_values = [0.4914, 0.4822, 0.4465]
-            variance = [0.2023, 0.1994, 0.2010]
-        elif opt.dataset == "mnist":
-            expected_values = [0.5]
-            variance = [0.5]
-        elif opt.dataset == "imagenet":
-            expected_values = [0.485, 0.456, 0.406]
-            variance = [0.229, 0.224, 0.225]
-        elif opt.dataset in ["gtsrb","celeba"]:
-            expected_values = [0,0,0]
-            variance = [1,1,1]
-        inputs_clone = inputs.clone().div(255.0)
-
-        if opt.dataset == "mnist":
-            inputs_clone[:,:,:,:] = (inputs_clone[:,:,:,:] - expected_values[0]).div(variance[0])
-        else:
-            for channel in range(3):
-                inputs_clone[:,channel,:,:] = (inputs_clone[:,channel,:,:] - expected_values[channel]).div(variance[channel])
-
-        return inputs_clone
     

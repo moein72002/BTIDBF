@@ -84,5 +84,6 @@ def get_target_label(testloader, testmodel, box, midmodel = None):
                 # if p == t:
                 #     reg[t] += 1
                     
-    return np.argmax(reg)
+    model_score = reg[np.argmax(reg)]
+    return np.argmax(reg), model_score
 

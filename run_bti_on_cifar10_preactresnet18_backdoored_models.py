@@ -65,6 +65,6 @@ for model_name in sorted_files:
     uround = 30
     norm_bound = 0.3
 
-    os.system(f"python btidbf.py --filename {filename} --model_name {model_name} --dataset {dataset} --tlabel {tlabel} --model {model_arch} --attack {attack} --device {device} --size {size} --batch_size {batch_size} --attack_type {attack_type} --mround {mround} --uround {uround} --norm_bound {norm_bound}")
+    os.system(f"python btidbf.py --output_file {output_file} --filename {filename} --model_name {model_name} --dataset {dataset} --tlabel {tlabel} --model {model_arch} --attack {attack} --device {device} --size {size} --batch_size {batch_size} --attack_type {attack_type} --mround {mround} --uround {uround} --norm_bound {norm_bound}")
 
 

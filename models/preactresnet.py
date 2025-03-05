@@ -103,7 +103,7 @@ class PreActResNet(nn.Module):
         return out
 
     def from_features_to_output(self, x):
-        out = self.avgpool(out)
+        out = self.avgpool(x)
         out = out.view(out.size(0), -1)
         out = self.linear(out)
         return out

@@ -16,6 +16,8 @@ def get_arguments():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--filename", type=str, default="")
+    parser.add_argument("--model_name", type=str, default="")
+    parser.add_argument("--output_file", type=str, default="")
 
     #load box
     parser.add_argument("--dataset", type=str, default="cifar10")

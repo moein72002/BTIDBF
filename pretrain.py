@@ -10,6 +10,7 @@ if __name__ == "__main__":
     opt = cfg.get_arguments().parse_args()
     device = opt.device
     box = Box(opt)
+    print(opt)
     save_path = box.get_save_path()
     _, _, classifier = box.get_state_dict()
 

@@ -147,7 +147,10 @@ class Box():
         state_dict = torch.load(filename, map_location=torch.device('cpu'))
 
         classifier = self.get_model()
-        classifier.load_state_dict(state_dict["model"])
+        if self.attack == "clean":
+            classifier.load_state_dict(state_dict)
+        else:
+            classifier.load_state_dict(state_dict["model"])
         
         classifier = classifier.to(self.device)
         classifier.eval()

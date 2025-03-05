@@ -113,13 +113,12 @@ def main(opt):
     if opt.use_max_bd_feat and not max_bd_feat is None:
         bd_gen = final_bd_gen
 
-    detected_tlabel, model_score = get_target_label(testloader=cln_trainloader, testmodel=classifier, box=box, midmodel=bd_gen)
+    detected_tlabel, model_score, score_list = get_target_label(testloader=cln_trainloader, testmodel=classifier, box=box, midmodel=bd_gen)
     print(f"model_name: {opt.model_name}, model_score: {model_score}, Target Label: {detected_tlabel}")
 
 
     with open(opt.output_file, "a") as f:
-        max_score = np.array(score_list).max() if score_list else None
-        f.write(f"model_name: {model_name}, model {model_index} {is_backdoored} {max_score}, scores: {score_list} \n\n")
+        f.write(f"model_name: {opt.model_name}, model {model_score}, scores: {score_list} \n\n")
     return detected_tlabel
 
 if __name__ == "__main__":

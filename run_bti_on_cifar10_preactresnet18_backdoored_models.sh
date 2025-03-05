@@ -1,0 +1,1 @@
+python run_bti_on_cifar10_preactresnet18_backdoored_models.py

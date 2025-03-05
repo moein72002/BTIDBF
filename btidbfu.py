@@ -117,7 +117,9 @@ def unlearn(model, bd_gen):
 
             cln_feat = classifier.from_input_to_features(cln_img)
             bd_gen_feat = classifier.from_input_to_features(bd_gen_img)
-            bd_gen_pred = classifier.from_features_to_output(bd_gen_feat)
+            bd_gen_pred = classifier.from_features_to_outpu
+            t(bd_gen_feat)
+            
             loss_pred = ce(bd_gen_pred, targets)
             loss_feat = mse(cln_feat, bd_gen_feat)
             loss = loss_pred + loss_feat

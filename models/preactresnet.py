@@ -94,6 +94,20 @@ class PreActResNet(nn.Module):
         out = self.linear(out)
         return out
 
+    def from_input_to_features(self, x):
+        out = self.conv1(x)
+        out = self.layer1(out)
+        out = self.layer2(out)
+        out = self.layer3(out)
+        out = self.layer4(out)
+        return out
+
+    def from_features_to_output(self, x):
+        out = self.avgpool(out)
+        out = out.view(out.size(0), -1)
+        out = self.linear(out)
+        return out
+
 
 def PreActResNet18(num_classes=10):
     return PreActResNet(PreActBlock, [2, 2, 2, 2], num_classes=num_classes)

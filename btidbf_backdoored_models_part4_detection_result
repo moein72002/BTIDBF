@@ -1,0 +1,22 @@
+model_name: cifar10_preactresnet18_badnet_0_1, model 9985.0, scores: [   0.    0.    0. 9985.    0.    0.    0.    0.   15.    0.] 
+
+model_name: cifar10_preactresnet18_blended_0_1, model 1060.0, scores: [1060.  988.  985.  966. 1021.  983. 1027.  977. 1015.  978.] 
+
+model_name: cifar10_preactresnet18_bpp_0_1, model 1510.0, scores: [1510.  886.  904.  903. 1030. 1017. 1018.  863.  946.  923.] 
+
+model_name: cifar10_preactresnet18_inputaware_0_1, model 1220.0, scores: [1220.  918.  938.  878.  980. 1106. 1024.  945. 1018.  973.] 
+
+model_name: cifar10_preactresnet18_lc_0_1, model 10000.0, scores: [10000.     0.     0.     0.     0.     0.     0.     0.     0.     0.] 
+
+model_name: cifar10_preactresnet18_lf_0_1, model 1102.0, scores: [1102.  993.  961.  957. 1020.  976. 1014.  981. 1019.  977.] 
+
+model_name: cifar10_preactresnet18_lira_0_1, model 1100.0, scores: [ 995. 1066. 1010.  901. 1022. 1100. 1009.  974.  991.  932.] 
+
+model_name: cifar10_preactresnet18_sig_0_1, model 10000.0, scores: [    0.     0.     0.     0.     0.     0.     0.     0.     0. 10000.] 
+
+model_name: cifar10_preactresnet18_ssba_0_1, model 1058.0, scores: [1058.  997.  956.  953. 1030.  999. 1002.  991. 1022.  992.] 
+
+model_name: cifar10_preactresnet18_trojannn_0_1, model 1092.0, scores: [1092.  992.  982.  956.  997. 1007.  981.  991. 1021.  981.] 
+
+model_name: cifar10_preactresnet18_wanet_0_1, model 1059.0, scores: [ 965.  996. 1002. 1046. 1059. 1028.  976.  971. 1009.  948.] 
+
